@@ -38,3 +38,22 @@ On Windows, close the workbook in Excel before a sample is due. Excel locks the 
 - `offset_minutes`: how many minutes past each interval to sample. Default 9, which gives hh:09, hh:19 and so on.
 - `output_file`: name of the spreadsheet.
 - Optional `[network]` section for Zscaler or other proxies: `ca_bundle`, `verify_ssl`, `http_proxy`, `https_proxy`.
+
+# All Orgs List (`mist_all_orgs_list.py`)
+
+A second script that uses the same `mist_api_usage_tracker.ini`. It lists every org on every cloud in `[clouds]` and saves them to the Excel file `mist_orgs_YYYY-MM-DD.xlsx`, next to the script.
+
+Every token needs **super-user** access (`/api/v1/super`) on its cloud.
+
+Before it collects anything, the script makes one small `/super` request to each cloud. If any cloud fails, it prints a table of the failed clouds and the reason for each, then exits with code 1. Reasons include HTTP 401 (wrong cloud or bad token) and HTTP 403 (no super-user access); a 403 also names the user the token belongs to. The script stops the same way if a cloud fails partway through the run. **The spreadsheet is only written when every cloud has been collected in full.**
+
+```bash
+python3 mist_all_orgs_list.py
+```
+
+0. **Access check.** One `/super/stats/orgs?limit=1` request per cloud. The script stops here if any cloud fails.
+1. **MSP table.** Pages through `GET /api/v1/super/msps` on each cloud to map each MSP ID to its name and tier.
+2. **Orgs.** Pages through `GET /api/v1/super/stats/orgs` on each cloud, 1,000 orgs per request.
+3. **Excel.** Writes one row per org to an **Orgs** sheet with these columns: Org Name, ID, Cloud, No. Sites, Inventory, Connected, Created/Modified (epoch and UTC), MSP ID/Name/Tier, the org's portal URL, Session Expiry, Num Devices, Num Devices Disconnected and Allow Mist. Created/Modified Time are real Excel dates, so they sort and filter correctly. The header row is frozen, auto filter is turned on for every column, and each column is sized to its longest value up to a maximum of 30 characters.
+
+When it finishes, it prints a table of MSPs, orgs, sites, devices and connected devices for each cloud, with totals. It waits and retries when Mist rate-limits it (HTTP 429), and it uses the same optional `[network]` proxy settings as the tracker.
