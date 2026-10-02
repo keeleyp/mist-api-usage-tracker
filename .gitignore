@@ -1,0 +1,6 @@
+# Real config holds API tokens - only the .example is committed
+*.ini
+!mist_api_usage_tracker.ini.example
+*.xlsx
+__pycache__/
+.DS_Store
